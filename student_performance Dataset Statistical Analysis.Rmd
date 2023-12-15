@@ -1,0 +1,214 @@
+---
+title: " Student Performance Dataset Statistical Analysis "
+output: html_notebook
+
+<!-- Data Pre-processing -->
+<!-- 1. Loading the Dataset: -->
+d1=read.table("E:/student/student-mat.csv",sep=";",header=TRUE)
+d2=read.table("E:/student/student-por.csv",sep=";",header=TRUE)
+
+d3=merge(d1,d2,by=c("school","sex","age","address","famsize","Pstatus","Medu","Fedu","Mjob","Fjob","reason","nursery","internet"))
+print(nrow(d3))
+
+<!-- 2. Handling Missing Data: -->
+<!-- # Check for missing values -->
+summary(d3)
+
+ <!-- Display the structure of the merged data frame -->
+ str(d3)
+ 
+ <!-- Impute missing values  -->
+ sum(is.na(d3))
+
+<!-- 3. Encoding Categorical Variables -->
+<!-- All the aforementioned categorical variables are already in a suitable format for analysis. There is no need to convert them. -->
+
+<!-- 4. Feature Engineering -->
+<!-- Create new features that might be useful for analysis. -->
+<!-- Create a new variable for average grade -->
+
+d3$avg_grade <- rowMeans(d3[, c("G1.x", "G2.x", "G3.x")])
+
+<!-- Display the first few rows of the data frame to verify the new feature -->
+
+head(d3)
+
+<!-- 5. Removing Unnecessary Columns -->
+<!-- Drop columns that are not relevant to the analysis or have too many missing values. In the given data set, no such columns exist. -->
+
+<!-- 6. Dealing with Outliers: -->
+<!-- Identify and handle outliers that might skew the analysis. -->
+<!-- Identify outliers in ‘G1’,’G2’,’G3’ attributes -->
+
+boxplot(d3$G1.x)
+boxplot(d3$G2.x)
+boxplot(d3$G3.x)
+
+<!-- No outliers exist in the above categorical variables. -->
+
+<!-- 7. Scaling and Standardization: -->
+<!-- There is no need to scale or standardize numerical variables in the dataframe d3. -->
+
+
+# Conduct statistical analysis
+# 1. Correlation Analysis
+# (a). What is the strength and nature of the correlation between G1, G2, and G3?
+correlation_matrix <- cor(d3[, c("G1.x", "G2.x", "G3.x")])
+# Print the correlation matrix
+print(correlation_matrix) 
+
+# To use the melt function, you need to make it available in your R session by loading the reshape2 package.
+library(reshape2)
+# Melt the correlation matrix
+melted_correlation <- melt(correlation_matrix)
+
+# Visualize the correlation matrix using a heatmap (optional, requires 'ggplot2' package)
+ library(ggplot2)
+ ggplot(data = melt(correlation_matrix), aes(x = Var1, y = Var2, fill = value)) +
+ geom_tile(color = "white") +
+ scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, limit = c(-1,1),
+ space = "Lab", name="Correlation") +
+ theme_minimal() +
+ labs(title = "Correlation Heatmap between G1, G2, and G3")
+ 
+ # (b). How does demographic information (age, gender) correlate with academic performance?
+# For G3.x (Final Grade)
+correlation_age <- cor(d3$age, d3$G3.x)
+# Convert gender to numeric (0 or 1)
+correlation_gender <- cor(as.numeric(d3$sex == "F"), d3$G3.x)
+# Print the correlation coefficients
+print(paste("Correlation between age and academic performance (G3.x):", correlation_age))
+print(paste("Correlation between gender and academic performance (G3.x):", correlation_gender))
+
+# For G2.x (Second Period Grade)
+correlation_age <- cor(d3$age, d3$G2.x)
+# Convert gender to numeric (0 or 1)
+correlation_gender <- cor(as.numeric(d3$sex == "F"), d3$G2.x) 
+
+# Print the correlation coefficients
+ print(paste("Correlation between age and academic performance (G2.x):", correlation_age))
+ print(paste("Correlation between gender and academic performance (G2.x):", correlation_gender))
+ 
+ # For G1.x (First Period Grade):
+correlation_age <- cor(d3$age, d3$G1.x)
+# Convert gender to numeric (0 or 1)
+correlation_gender <- cor(as.numeric(d3$sex == "F"), d3$G1.x)
+# Print the correlation coefficients
+print(paste("Correlation between age and academic performance (G1.x):", correlation_age))
+print(paste("Correlation between gender and academic performance (G1.x):", correlation_gender))
+
+# 2. Predictive Modeling:
+# (a). Can we accurately predict the final year grade (G3) based on the first two period grades (G1 and G2)?
+# Linear Regression:
+# Fit a linear regression model
+linear_model <- lm(G3.x ~ G1.x + G2.x, data = d3)
+ # Summary of the linear model
+summary(linear_model)
+
+# 3. Impact of External Factors:
+# (a). How does family support correlate with academic achievement?
+# Perform ANOVA
+if ("famsup.x" %in% colnames(d3) & "G3.x" %in% colnames(d3)) {
+     anova_result <- aov(G3.x ~ famsup.x, data = d3)
+     
+    # Print ANOVA summary
+    print(summary(anova_result))
+     
+     # Plot the ANOVA results
+     plot(anova_result)
+ } else {
+     print("Column names not found. Please adjust accordingly.")
+ }
+ 
+# Regression analysis
+if ("famsup.x" %in% colnames(d3) & "G3.x" %in% colnames(d3) & "age" %in% colnames(d3) & "studytime.x" %in% colnames(d3)) {
+     # Fit a linear regression model
+     linear_model <- lm(G3.x ~ famsup.x + age + studytime.x, data = d3)
+    
+    # Summary of the linear model
+     print(summary(linear_model))
+    
+     # Plotting regression diagnostics (residuals vs. fitted values)
+     plot(linear_model, 1)
+ } else {
+     print("Column names not found. Please adjust accordingly.")
+}
+
+# (b). Is there a relationship between study time and final grades?
+# Perform ANOVA
+ if ("studytime.x" %in% colnames(d3) & "G3.x" %in% colnames(d3)) {
+    anova_result <- aov(G3.x ~ studytime.x, data = d3)     
+     # Print ANOVA summary
+     print(summary(anova_result))
+     # Plot the ANOVA results
+     plot(anova_result)
+ } else {
+     print("Column names not found. Please adjust accordingly.")
+}
+
+# Perform Regression Analysis
+ if ("studytime.x" %in% colnames(d3) & "G3.x" %in% colnames(d3)) {
+     regression_model <- lm(G3.x ~ studytime.x, data = d3)
+     
+     # Print Regression model summary
+     print(summary(regression_model))
+    
+     # Plot the regression model
+     plot(d3$studytime.x, d3$G3.x, main = "Regression Analysis", xlab = "Study Time.x", ylab = "Final Grades")
+     abline(regression_model, col = "red")
+ } else {
+     print("Column names not found. Please adjust accordingly.")
+}
+
+# 6.4. Behavioural Analysis:
+# (a). Does alcohol consumption have a measurable impact on student performance?
+# Calculate mean, median, and mode for Daily Alcohol Consumption
+ if ("Dalc.x" %in% colnames(d3) & "G3.x" %in% colnames(d3)) {
+     mean_alcohol <- mean(d3$Dalc.x)
+     median_alcohol <- median(d3$Dalc.x)
+    mode_alcohol <- as.numeric(names(sort(table(d3$Dalc.x), decreasing = TRUE)[1]))
+     
+     # Print descriptive statistics
+     print(paste("Mean Alcohol Consumption:", mean_alcohol))
+     print(paste("Median Alcohol Consumption:", median_alcohol))
+     print(paste("Mode Alcohol Consumption:", mode_alcohol))
+ } else {
+     print("Column names not found. Please adjust accordingly.")
+}
+# Box Plot
+ boxplot(d3$G3.x ~ d3$Dalc.x, main = "Box Plot: Daily Alcohol Consumption vs. Student Performance",
+         xlab = "Daily Alcohol Consumption", ylab = "Student Performance")
+
+
+ # Calculate mean, median, and mode for Weekend Alcohol Consumption
+ if ("Walc.x" %in% colnames(d3) & "G3.x" %in% colnames(d3)) {
+     mean_alcohol <- mean(d3$Walc.x)
+     median_alcohol <- median(d3$Walc.x)
+     mode_alcohol <- as.numeric(names(sort(table(d3$Walc.x), decreasing = TRUE)[1]))
+     
+     # Print descriptive statistics
+     print(paste("Mean Alcohol Consumption:", mean_alcohol))
+    print(paste("Median Alcohol Consumption:", median_alcohol))
+     print(paste("Mode Alcohol Consumption:", mode_alcohol))
+ } else {
+     print("Column names not found. Please adjust accordingly.")
+ }
+
+ # Box Plot
+ boxplot(d3$G3.x ~ d3$Walc.x, main = "Box Plot: Weekend Alcohol Consumption vs. Student Performance",
+         xlab = "Weekend Alcohol Consumption", ylab = "Student Performance")
+         
+# (b). What is the relationship between health status and academic success?
+# Descriptive Statistics
+ mean_health <- mean(d3$health.x)
+ median_health <- median(d3$health.x)
+ mode_health <- as.numeric(names(sort(table(d3$health.x), decreasing = TRUE)[1]))
+ 
+ # Print descriptive statistics
+ print(paste("Mean Health Status:", mean_health))
+ print(paste("Median Health Status:", median_health))
+ print(paste("Mode Health Status:", mode_health))
+
+# Box Plot
+boxplot(d3$G3.x ~ d3$health.x, main = "Box Plot: Health Status vs. Academic Success",
+        xlab = "Health Status", ylab = "Academic Success")
